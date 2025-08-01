@@ -13,7 +13,8 @@ def main() -> None:
     """Main entry point for the print-image command-line tool."""
     parser = argparse.ArgumentParser(
         description="Print an image to the terminal using ANSI colors",
-        prog="print-image"
+        prog="print-image",
+        add_help=False
     )
     
     parser.add_argument(
@@ -28,7 +29,7 @@ def main() -> None:
     )
     
     parser.add_argument(
-        "--height",
+        "-h", "--height",
         type=int,
         help="Maximum height in terminal rows (if width not specified, width will be calculated to preserve aspect ratio)"
     )
@@ -38,6 +39,12 @@ def main() -> None:
         type=int,
         default=0,
         help="Rendering flags (0=default, 1=simple mode with FLAG_NOOPT)"
+    )
+    
+    parser.add_argument(
+        "--help",
+        action="help",
+        help="Show this help message and exit"
     )
     
     args = parser.parse_args()
