@@ -23,6 +23,7 @@ build-backend = "hatchling.build"
 dev = [
     "black>=25.1.0",
     "mypy>=1.17.0",
+    "pytest>=8.3.4",
 ]
 
 [tool.mypy]
