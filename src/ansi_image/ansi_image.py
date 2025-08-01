@@ -1,6 +1,9 @@
 """ANSI Image class for storing and displaying terminal-based images."""
 
-from typing import List
+from typing import List, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from PIL import Image
 
 
 class AnsiImage:
@@ -41,4 +44,25 @@ class AnsiImage:
         Returns:
             A string showing the object's type and dimensions
         """
-        return f"AnsiImage(width={self.width}, height={self.height}, lines={len(self.data)})"
+        return f"AnsiImage(width={self.width}, height={self.height}, lines={repr(self.data)})"
+    
+    @staticmethod
+    def from_image(
+        img: "Image.Image", output_width: int, output_height: int, flags: int = 0
+    ) -> "AnsiImage":
+        """Create an AnsiImage from a PIL Image.
+        
+        This is a convenience method that calls the to_ascii function from the
+        ascii_art module to convert a PIL Image to an AnsiImage.
+        
+        Args:
+            img: PIL/Pillow Image object to convert to ASCII art
+            output_width: Maximum width for the output (in terminal character columns)
+            output_height: Maximum height for the output (in terminal character rows)
+            flags: Bit flags controlling rendering options
+            
+        Returns:
+            An AnsiImage object containing the converted image
+        """
+        from .ascii_art import to_ascii
+        return to_ascii(img, output_width, output_height, flags)

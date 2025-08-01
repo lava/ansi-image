@@ -6,8 +6,9 @@ block characters and ANSI color codes.
 
 from typing import Callable, NamedTuple, Tuple, List, Optional, Dict, TYPE_CHECKING
 import math
-from pydantic import BaseModel
 from collections import defaultdict
+
+from .ansi_image import AnsiImage
 
 if TYPE_CHECKING:
     from PIL import Image
@@ -952,15 +953,9 @@ def find_char_data(
         return create_char_data(get_pixel, x0, y0, codepoint, best_pattern)
 
 
-class AsciiImage(BaseModel):
-    width: int
-    height: int
-    data: list[str]
-
-
 def to_ascii(
     img: "Image.Image", output_width: int, output_height: int, flags: int = 0
-) -> AsciiImage:
+) -> AnsiImage:
     """Convert an image to ASCII art with resizing logic from TerminalImageViewer.
 
     This function implements the same resize logic as tiv.cpp:360-366, scaling the
@@ -1009,4 +1004,4 @@ def to_ascii(
 
     # Convert the (possibly resized) image to ASCII using print_image
     lines = print_image(img, flags)
-    return AsciiImage(width=new_width // 4, height=new_height // 8, data=lines)
+    return AnsiImage(width=new_width // 4, height=new_height // 8, data=lines)
