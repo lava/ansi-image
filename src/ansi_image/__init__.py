@@ -1,2 +1,1 @@
-def main() -> None:
-    print("Hello from ansi-image!")
+from ansi_image.ansi_image import AnsiImage
