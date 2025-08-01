@@ -2,7 +2,7 @@
 
 import os
 from typing import List, Optional, Tuple
-from .ascii_art import to_ascii
+from .algorithms import to_ascii
 from PIL import Image
 
 
@@ -54,7 +54,8 @@ class AnsiImage:
     """
     
     def __init__(self, width: int, height: int, data: List[str]) -> None:
-        """Initialize an AnsiImage.
+        """Initialize an AnsiImage. Note: You probably want to use AnsiImage.from_image()
+        or AnsiImage.from_image_file() instead.
         
         Args:
             width: Width of the image in terminal character columns
@@ -91,7 +92,7 @@ class AnsiImage:
         """Create an AnsiImage from a PIL Image.
         
         This is a convenience method that calls the to_ascii function from the
-        ascii_art module to convert a PIL Image to an AnsiImage.
+        algorithms module to convert a PIL Image to an AnsiImage.
         
         Args:
             img: PIL/Pillow Image object to convert to ASCII art
