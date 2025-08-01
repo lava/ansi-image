@@ -2,31 +2,31 @@
 
 import os
 from typing import List, Optional, Tuple
-from .algorithms import to_ascii
 from PIL import Image
 
 
 def _get_terminal_dimensions(
-    output_width: Optional[int], output_height: Optional[int]
+    output_width: Optional[int], output_height: Optional[int], img: Optional["Image.Image"] = None
 ) -> Tuple[int, int]:
-    """Get terminal dimensions, validating that either both or neither are provided.
+    """Get terminal dimensions, calculating missing dimension to preserve aspect ratio if needed.
     
     Args:
         output_width: Optional width in terminal columns
-        output_height: Optional height in terminal rows
+        output_height: Optional height in terminal rows  
+        img: Optional PIL Image to calculate aspect ratio from
         
     Returns:
         Tuple of (width, height) as integers
         
     Raises:
-        ValueError: If only one of output_width or output_height is provided
+        ValueError: If both dimensions are None but no image is provided for aspect ratio calculation
     """
-    # Validate that either both or neither dimensions are provided
-    if (output_width is None) != (output_height is None):
-        raise ValueError("Either both output_width and output_height must be provided, or both must be None")
+    # If both dimensions are provided, use them as-is
+    if output_width is not None and output_height is not None:
+        return output_width, output_height
     
-    # If dimensions not provided, get terminal size
-    if output_width is None:
+    # If neither dimension is provided, get terminal size
+    if output_width is None and output_height is None:
         try:
             terminal_size = os.get_terminal_size()
             output_width = terminal_size.columns
@@ -35,8 +35,25 @@ def _get_terminal_dimensions(
             # Fallback to default size if terminal size cannot be determined
             output_width = 80
             output_height = 24
+        return output_width, output_height
     
-    # At this point, both output_width and output_height are guaranteed to be integers
+    # If only one dimension is provided, calculate the other based on aspect ratio
+    if img is None:
+        raise ValueError("Image must be provided to calculate missing dimension based on aspect ratio")
+    
+    original_width, original_height = img.size
+    aspect_ratio = original_width / original_height
+    
+    if output_width is not None:
+        # Calculate height from width while preserving aspect ratio
+        # Account for character cell ratio (4x8 pixels per cell)
+        output_height = int((output_width * 4) / (aspect_ratio * 8))
+    elif output_height is not None:
+        # Calculate width from height while preserving aspect ratio  
+        # Account for character cell ratio (4x8 pixels per cell)
+        output_width = int((output_height * 8 * aspect_ratio) / 4)
+    
+    # At this point, both dimensions should be set
     assert output_width is not None and output_height is not None
     return output_width, output_height
 
@@ -97,18 +114,15 @@ class AnsiImage:
         Args:
             img: PIL/Pillow Image object to convert to ASCII art
             output_width: Maximum width for the output (in terminal character columns).
-                         If None, uses current terminal width. Must be None if output_height is None.
+                         If None, uses current terminal width or calculates from height and aspect ratio.
             output_height: Maximum height for the output (in terminal character rows).
-                          If None, uses current terminal height. Must be None if output_width is None.
+                          If None, uses current terminal height or calculates from width and aspect ratio.
             flags: Bit flags controlling rendering options
             
         Returns:
             An AnsiImage object containing the converted image
-            
-        Raises:
-            ValueError: If only one of output_width or output_height is provided
         """
-        output_width, output_height = _get_terminal_dimensions(output_width, output_height)
+        output_width, output_height = _get_terminal_dimensions(output_width, output_height, img)
         return to_ascii(img, output_width, output_height, flags)
     
     @staticmethod
@@ -126,9 +140,9 @@ class AnsiImage:
         Args:
             file_path: Path to the image file to load
             output_width: Maximum width for the output (in terminal character columns).
-                         If None, uses current terminal width. Must be None if output_height is None.
+                         If None, uses current terminal width or calculates from height and aspect ratio.
             output_height: Maximum height for the output (in terminal character rows).
-                          If None, uses current terminal height. Must be None if output_width is None.
+                          If None, uses current terminal height or calculates from width and aspect ratio.
             flags: Bit flags controlling rendering options
             
         Returns:
@@ -137,7 +151,57 @@ class AnsiImage:
         Raises:
             FileNotFoundError: If the image file does not exist
             IOError: If the image file cannot be opened or is not a valid image
-            ValueError: If only one of output_width or output_height is provided
         """
         img = Image.open(file_path)
         return AnsiImage.from_image(img, output_width, output_height, flags)
+
+
+def to_ascii(
+    img: "Image.Image", output_width: int, output_height: int, flags: int = 0
+) -> "AnsiImage":
+    """Convert an image to ASCII art with resizing logic from TerminalImageViewer.
+
+    This function implements the same resize logic as tiv.cpp:360-366, scaling the
+    image down to fit within the specified dimensions while maintaining aspect ratio.
+
+    Args:
+        img: PIL/Pillow Image object to convert to ASCII art
+        output_width: Maximum width for the output (in terminal character columns)
+        output_height: Maximum height for the output (in terminal character rows)
+        flags: Bit flags controlling rendering options (same as print_image)
+
+    Returns:
+        List of strings containing ANSI color codes and Unicode characters representing the image
+    """
+    from ansi_image.algorithms import print_image
+
+    # Convert to RGB if needed
+    if img.mode != "RGB":
+        img = img.convert("RGB")
+
+    # Get original image dimensions
+    original_width, original_height = img.size
+
+    # Convert terminal dimensions to pixel dimensions
+    # Each character cell represents 4x8 pixels in the ASCII art
+    max_pixel_width = output_width * 4
+    max_pixel_height = output_height * 8
+
+    # Apply resize logic from tiv.cpp:360-366
+    if original_width > max_pixel_width or original_height > max_pixel_height:
+        # Calculate scale factor that fits image within target dimensions
+        # This matches the fitted_within logic: min(container.width/width, container.height/height)
+        scale = min(
+            max_pixel_width / original_width, max_pixel_height / original_height
+        )
+
+        # Calculate new dimensions
+        new_width = int(original_width * scale)
+        new_height = int(original_height * scale)
+
+        # Resize the image using high-quality resampling
+        img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+
+    # Convert the (possibly resized) image to ASCII using print_image
+    lines = print_image(img, flags)
+    return AnsiImage(width=new_width // 4, height=new_height // 8, data=lines)

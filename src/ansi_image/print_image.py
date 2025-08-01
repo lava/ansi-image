@@ -24,13 +24,13 @@ def main() -> None:
     parser.add_argument(
         "-w", "--width",
         type=int,
-        help="Maximum width in terminal columns (must be used with --height)"
+        help="Maximum width in terminal columns (if height not specified, height will be calculated to preserve aspect ratio)"
     )
     
     parser.add_argument(
         "--height",
         type=int,
-        help="Maximum height in terminal rows (must be used with --width)"
+        help="Maximum height in terminal rows (if width not specified, width will be calculated to preserve aspect ratio)"
     )
     
     parser.add_argument(
@@ -52,13 +52,9 @@ def main() -> None:
         print(f"Error: '{args.filename}' is not a file.", file=sys.stderr)
         sys.exit(1)
     
-    # Validate dimensions (both or neither must be provided)
+    # Get dimensions from args
     width: Optional[int] = getattr(args, 'width', None)
     height: Optional[int] = getattr(args, 'height', None)
-    
-    if (width is None) != (height is None):
-        print("Error: Both --width and --height must be provided together, or neither.", file=sys.stderr)
-        sys.exit(1)
     
     try:
         # Create and display the image
