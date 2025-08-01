@@ -1,1 +1,1 @@
-from ansi_image.ansi_image import AnsiImage
+from ansi_image.ansi_image import AnsiImage, RenderedAnsiImage

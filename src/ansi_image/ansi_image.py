@@ -58,10 +58,10 @@ def _get_terminal_dimensions(
     return output_width, output_height
 
 
-class AnsiImage:
-    """A class to represent an ANSI-colored image for terminal display.
+class RenderedAnsiImage:
+    """A class to represent a rendered ANSI-colored image for terminal display.
     
-    This class stores image data as a collection of ANSI-colored strings that can
+    This class stores pre-rendered image data as a collection of ANSI-colored strings that can
     be printed to the terminal to display the image.
     
     Attributes:
@@ -71,8 +71,7 @@ class AnsiImage:
     """
     
     def __init__(self, width: int, height: int, data: List[str]) -> None:
-        """Initialize an AnsiImage. Note: You probably want to use AnsiImage.from_image()
-        or AnsiImage.from_image_file() instead.
+        """Initialize a RenderedAnsiImage.
         
         Args:
             width: Width of the image in terminal character columns
@@ -92,12 +91,52 @@ class AnsiImage:
         return "\n".join(self.data)
     
     def __repr__(self) -> str:
-        """Return a string representation of the AnsiImage object.
+        """Return a string representation of the RenderedAnsiImage object.
         
         Returns:
             A string showing the object's type and dimensions
         """
-        return f"AnsiImage(width={self.width}, height={self.height}, lines={repr(self.data)})"
+        return f"RenderedAnsiImage(width={self.width}, height={self.height}, lines={repr(self.data)})"
+
+
+class AnsiImage:
+    """A class to store image data and render it to terminal display.
+    
+    This class stores the original PIL Image and provides methods to render
+    it to ANSI-colored terminal output with various options.
+    
+    Attributes:
+        image: The PIL Image object containing the image data
+    """
+    
+    def __init__(self, image: "Image.Image") -> None:
+        """Initialize an AnsiImage with PIL Image data.
+        
+        Args:
+            image: PIL/Pillow Image object to store
+        """
+        self.image = image
+    
+    def render(
+        self,
+        output_width: Optional[int] = None, 
+        output_height: Optional[int] = None, 
+        flags: int = 0
+    ) -> "RenderedAnsiImage":
+        """Render the image to ANSI terminal output.
+        
+        Args:
+            output_width: Maximum width for the output (in terminal character columns).
+                         If None, uses current terminal width or calculates from height and aspect ratio.
+            output_height: Maximum height for the output (in terminal character rows).
+                          If None, uses current terminal height or calculates from width and aspect ratio.
+            flags: Bit flags controlling rendering options
+            
+        Returns:
+            A RenderedAnsiImage object containing the converted image
+        """
+        output_width, output_height = _get_terminal_dimensions(output_width, output_height, self.image)
+        return to_ascii(self.image, output_width, output_height, flags)
     
     @staticmethod
     def from_image(
@@ -105,11 +144,11 @@ class AnsiImage:
         output_width: Optional[int] = None, 
         output_height: Optional[int] = None, 
         flags: int = 0
-    ) -> "AnsiImage":
-        """Create an AnsiImage from a PIL Image.
+    ) -> "RenderedAnsiImage":
+        """Create a RenderedAnsiImage from a PIL Image.
         
         This is a convenience method that calls the to_ascii function from the
-        algorithms module to convert a PIL Image to an AnsiImage.
+        algorithms module to convert a PIL Image to a RenderedAnsiImage.
         
         Args:
             img: PIL/Pillow Image object to convert to ASCII art
@@ -120,7 +159,7 @@ class AnsiImage:
             flags: Bit flags controlling rendering options
             
         Returns:
-            An AnsiImage object containing the converted image
+            A RenderedAnsiImage object containing the converted image
         """
         output_width, output_height = _get_terminal_dimensions(output_width, output_height, img)
         return to_ascii(img, output_width, output_height, flags)
@@ -131,11 +170,11 @@ class AnsiImage:
         output_width: Optional[int] = None, 
         output_height: Optional[int] = None, 
         flags: int = 0
-    ) -> "AnsiImage":
-        """Create an AnsiImage from an image file.
+    ) -> "RenderedAnsiImage":
+        """Create a RenderedAnsiImage from an image file.
         
         This is a convenience method that loads an image from a file path
-        and then converts it to an AnsiImage using the from_image method.
+        and then converts it to a RenderedAnsiImage using the from_image method.
         
         Args:
             file_path: Path to the image file to load
@@ -146,7 +185,7 @@ class AnsiImage:
             flags: Bit flags controlling rendering options
             
         Returns:
-            An AnsiImage object containing the converted image
+            A RenderedAnsiImage object containing the converted image
             
         Raises:
             FileNotFoundError: If the image file does not exist
@@ -158,7 +197,7 @@ class AnsiImage:
 
 def to_ascii(
     img: "Image.Image", output_width: int, output_height: int, flags: int = 0
-) -> "AnsiImage":
+) -> "RenderedAnsiImage":
     """Convert an image to ASCII art with resizing logic from TerminalImageViewer.
 
     This function implements the same resize logic as tiv.cpp:360-366, scaling the
@@ -204,4 +243,4 @@ def to_ascii(
 
     # Convert the (possibly resized) image to ASCII using print_image
     lines = print_image(img, flags)
-    return AnsiImage(width=new_width // 4, height=new_height // 8, data=lines)
+    return RenderedAnsiImage(width=new_width // 4, height=new_height // 8, data=lines)

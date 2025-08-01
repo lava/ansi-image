@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 from typing import Any, Dict
 
-from src.ansi_image.ansi_image import AnsiImage
+from src.ansi_image.ansi_image import AnsiImage, RenderedAnsiImage
 
 
 class TestAnsiImage(unittest.TestCase):
@@ -130,13 +130,18 @@ class TestAnsiImage(unittest.TestCase):
                         f"Actual: {actual_aspect:.3f}, Target: {target_width}x{target_height}")
 
     def test_dimension_validation(self) -> None:
-        """Test validation of width/height parameters."""
-        # Test that providing only one dimension raises ValueError
-        with self.assertRaises(ValueError):
-            AnsiImage.from_image_file(str(self.test_image_path), 40, None, 0)
+        """Test single dimension specification with aspect ratio preservation."""
+        # Test that providing only width works with aspect ratio preservation
+        ansi_img_width_only = AnsiImage.from_image_file(str(self.test_image_path), 40, None, 0)
+        self.assertGreater(ansi_img_width_only.width, 0)
+        self.assertGreater(ansi_img_width_only.height, 0)
+        self.assertLessEqual(ansi_img_width_only.width, 40)
         
-        with self.assertRaises(ValueError):
-            AnsiImage.from_image_file(str(self.test_image_path), None, 20, 0)
+        # Test that providing only height works with aspect ratio preservation
+        ansi_img_height_only = AnsiImage.from_image_file(str(self.test_image_path), None, 20, 0)
+        self.assertGreater(ansi_img_height_only.width, 0)
+        self.assertGreater(ansi_img_height_only.height, 0)
+        self.assertLessEqual(ansi_img_height_only.height, 20)
 
     def test_string_representation(self) -> None:
         """Test string representation methods."""
@@ -148,12 +153,12 @@ class TestAnsiImage(unittest.TestCase):
         
         # Test __repr__ contains expected format
         repr_str = repr(ansi_img)
-        self.assertIn("AnsiImage", repr_str)
+        self.assertIn("RenderedAnsiImage", repr_str)
         self.assertIn(f"width={ansi_img.width}", repr_str)
         self.assertIn(f"height={ansi_img.height}", repr_str)
 
     def test_from_pil_image(self) -> None:
-        """Test creating AnsiImage from PIL Image object."""
+        """Test creating RenderedAnsiImage from PIL Image object."""
         from PIL import Image
         
         with Image.open(self.test_image_path) as img:
@@ -162,6 +167,27 @@ class TestAnsiImage(unittest.TestCase):
             self.assertGreater(ansi_img.width, 0)
             self.assertGreater(ansi_img.height, 0)
             self.assertEqual(len(ansi_img.data), ansi_img.height)
+
+    def test_new_ansi_image_with_render(self) -> None:
+        """Test the new AnsiImage class with render method."""
+        from PIL import Image
+        
+        with Image.open(self.test_image_path) as img:
+            # Create new AnsiImage with image data
+            ansi_img = AnsiImage(img)
+            
+            # Render it to RenderedAnsiImage
+            rendered = ansi_img.render(30, 15, 0)
+            
+            self.assertIsInstance(rendered, RenderedAnsiImage)
+            self.assertGreater(rendered.width, 0)
+            self.assertGreater(rendered.height, 0)
+            self.assertEqual(len(rendered.data), rendered.height)
+            
+            # Test rendering with different parameters
+            rendered_large = ansi_img.render(60, 30, 0)
+            self.assertGreater(rendered_large.width, rendered.width)
+            self.assertGreater(rendered_large.height, rendered.height)
 
     def test_different_flag_combinations(self) -> None:
         """Test different flag combinations for rendering options."""
