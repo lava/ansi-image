@@ -42,6 +42,18 @@ def main() -> None:
     )
     
     parser.add_argument(
+        "--fill",
+        action="store_true",
+        help="Fill background to fit the entire bounding box"
+    )
+    
+    parser.add_argument(
+        "--bg-color",
+        default="#000000",
+        help="Background color as hex string when using --fill (default: #000000)"
+    )
+    
+    parser.add_argument(
         "--help",
         action="help",
         help="Show this help message and exit"
@@ -65,7 +77,8 @@ def main() -> None:
     
     try:
         # Create and display the image
-        ansi_img = AnsiImage.from_image_file(str(image_path), width, height, args.flags)
+        fill_color = getattr(args, 'bg_color', '#000000') if args.fill else None
+        ansi_img = AnsiImage.from_image_file(str(image_path), width, height, args.flags, fill_color)
         print(ansi_img)
     
     except Exception as e:
