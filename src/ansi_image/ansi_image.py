@@ -1,6 +1,7 @@
 """ANSI Image class for storing and displaying terminal-based images."""
 
 import os
+import re
 from typing import List, Optional, Tuple
 from PIL import Image
 
@@ -140,6 +141,69 @@ class AnsiImage:
         """
         output_width, output_height = _get_terminal_dimensions(output_width, output_height, self.image)
         return to_ascii(self.image, output_width, output_height, flags, fill)
+    
+    def __format__(self, format_spec: str) -> str:
+        """Format the AnsiImage with custom format specifiers.
+        
+        Supports format specifiers like:
+        - w=10 or width=10: Set width to 10 columns
+        - h=20 or height=20: Set height to 20 rows  
+        - bg=#ffffff or bg=ffffff: Set background color
+        - flags=1: Set rendering flags
+        
+        Multiple specifiers can be combined with commas:
+        f"{image:w=10,h=20,bg=#ffffff}"
+        
+        Args:
+            format_spec: Format specification string
+            
+        Returns:
+            Formatted string representation of the rendered image
+        """
+        # Default values
+        width: Optional[int] = None
+        height: Optional[int] = None
+        fill: Optional[str] = None
+        flags: int = 0
+        
+        # Parse format specifiers
+        if format_spec:
+            # Split by commas and process each specifier
+            for spec in format_spec.split(','):
+                spec = spec.strip()
+                if '=' not in spec:
+                    continue
+                    
+                key, value = spec.split('=', 1)
+                key = key.strip().lower()
+                value = value.strip()
+                
+                if key in ('w', 'width'):
+                    try:
+                        width = int(value)
+                    except ValueError:
+                        raise ValueError(f"Invalid width value: {value}")
+                elif key in ('h', 'height'):
+                    try:
+                        height = int(value)
+                    except ValueError:
+                        raise ValueError(f"Invalid height value: {value}")
+                elif key in ('bg', 'background', 'fill'):
+                    # Accept both #ffffff and ffffff formats
+                    if not value.startswith('#') and re.match(r'^[0-9a-fA-F]{6}$', value):
+                        value = '#' + value
+                    fill = value
+                elif key == 'flags':
+                    try:
+                        flags = int(value)
+                    except ValueError:
+                        raise ValueError(f"Invalid flags value: {value}")
+                else:
+                    raise ValueError(f"Unknown format specifier: {key}")
+        
+        # Render the image with the specified parameters
+        rendered = self.render(output_width=width, output_height=height, flags=flags, fill=fill)
+        return str(rendered)
     
     @staticmethod
     def from_image(
