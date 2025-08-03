@@ -2,10 +2,24 @@
 
 A library and tool for displaying images in the terminal using ANSI color codes. This is a straight port of the algorithm from the [tiv (TerminalImageViewer)](https://github.com/stefanhaustein/TerminalImageViewer) command, making it available as a Python library.
 
+The image handling is based on PIL/Pillow, so all common image formats are supported.
+
+For *displaying* the images, your terminal must support ANSI, 24 bit true color
+and unicode rendering. Unless you're a retro computing enthusiast, your current
+terminal does support these.
+
 ## Installation
+
+Install via pypi:
 
 ```bash
 pip install ansi-image
+```
+
+Or use as a standalone tool:
+
+```bash
+uvx ansi-image tests/test_image.png
 ```
 
 ## Usage
@@ -13,62 +27,65 @@ pip install ansi-image
 ### Basic Usage
 
 ```python
-from PIL import Image
 from ansi_image import AnsiImage
 
-# Load an image
-img = Image.open("path/to/your/image.jpg")
-
-# Create an AnsiImage object (keeps full image in memory)
-ansi_img = AnsiImage(img)
-
-# Print to terminal
+ansi_img = AnsiImage.from_file("tests/test_image.png")
 print(ansi_img.render())
 ```
 
-### Memory Efficient Usage
-
-The main `AnsiImage` class keeps a full copy of the source image in memory. For memory efficiency, you can use the `render()` method to get only the text version:
-
-```python
-from PIL import Image
-from ansi_image import AnsiImage
-
-# Load and render directly to text (doesn't keep image in memory)
-rendered = AnsiImage.from_file("path/to/your/image.jpg")
-print(rendered)
-
-# Or from an existing PIL Image
-img = Image.open("path/to/your/image.jpg")
-rendered = AnsiImage.from_image(img)
-print(rendered)
-```
+![Result](readme_image.png)
 
 ### Size Control
 
-```python
-# Specify dimensions (terminal columns x rows)
-rendered = ansi_img.render(output_width=80, output_height=24)
-print(rendered)
+The output width and height paramers can be used to specify the *maximum*
+width and height of the rendered image. The image will be rendered with
+the largest possible size that fits within the given bounding box and keeps
+the original image's aspect ratio.
 
-# Auto-fit to terminal size (default)
-rendered = ansi_img.render()
-print(rendered)
+To ensure an image with exact dimension, use the 'fill' keyword option to
+add add a background fill extending the image to the specified size.
+
+Note that the width and height is measured in termianl characters, which
+are not square but rectangular.
+
+```python
+from ansi_image import AnsiImage
+
+ansi_img = AnsiImage.from_file("tests/test_image.png")
+
+# Use the current terminal size as default width and height
+print(ansi_img.render())
+input("press enter...")
+
+# Set an explicit max width and height
+rendered_image = ansi_img.render(max_width=80, max_height=24)
+print(rendered_image)
+input("press enter...")
 
 # Using format strings
 print(f"{ansi_img:w=40,h=20}")
 print(f"{ansi_img:width=60}")
+input("press enter...")
+
+# Add background color to fill the entire bounding box
+rendered = ansi_img.render(fill="#ffffff")
+print(rendered)
+print(f"rendered image with dimensions f{rendered.width}x{rendered.height}")
 ```
 
-### Background Fill
+### Image Stretching
+
+For precise control over image dimensions without maintaining aspect ratio, you can manipulate the image using PIL before rendering:
 
 ```python
-# Add background color to fill the entire bounding box
-rendered = ansi_img.render(fill="#ffffff")  # White background
-print(rendered)
+from ansi_image import AnsiImage
+from PIL import Image
 
-# Using format strings
-print(f"{ansi_img:w=40,bg=#000000}")  # Black background
+# Load and stretch the image to exact dimensions
+img = Image.open("tests/test_image.png")
+stretched_img = img.resize((160, 48))  # Stretch to exact dimensions
+ansi_stretched = AnsiImage.from_image(stretched_img)
+print(ansi_stretched.render())
 ```
 
 ### Command Line Tool
@@ -76,11 +93,10 @@ print(f"{ansi_img:w=40,bg=#000000}")  # Black background
 The package also includes a command-line tool:
 
 ```bash
-print path/to/your/image.jpg
-print --width 80 --height 24 image.jpg
-print --fill "#ffffff" image.jpg
-# Or use the alias:
-ansi-image path/to/your/image.jpg
+uvx ansi-image tests/test_image.png
+uvx ansi-image --width 80 --height 24 tests/test_image.png
+# From the source repository
+uv run ansi-image tests/test_image.png
 ```
 
 ## API Reference
@@ -89,10 +105,10 @@ ansi-image path/to/your/image.jpg
 
 Main class that stores the original PIL Image and provides rendering methods.
 
-- `AnsiImage(image)` - Create from PIL Image object
-- `render(output_width=None, output_height=None, flags=0, fill=None)` - Render to RenderedAnsiImage
-- `AnsiImage.from_image(img, ...)` - Static method to render directly from PIL Image
-- `AnsiImage.from_file(path, ...)` - Static method to load and render from file
+- `img = render(max_width=None, max_height=None, flags=0, fill=None)` - Render to RenderedAnsiImage
+- `AnsiImage.from_image(img, ...)` - Static method to create directly from PIL Image
+- `AnsiImage.from_file(path, ...)` - Static method to load and create from file
+- `str(img)` - Convert to printable string
 
 ### RenderedAnsiImage
 
@@ -101,14 +117,21 @@ Contains the pre-rendered text representation that can be printed.
 - `str(rendered)` - Convert to printable string
 - `rendered.width` - Width in terminal columns
 - `rendered.height` - Height in terminal rows
-- `rendered.data` - List of strings with ANSI codes
+- `rendered.data` - List of strings with ANSI codes, one per row.
 
 ## Memory Usage
 
-- `AnsiImage` objects keep the full PIL Image in memory, allowing multiple renders with different parameters
-- `RenderedAnsiImage` objects only contain the text representation
-- For one-time rendering, use the static methods `from_image()` or `from_file()` to avoid keeping the image in memory
+The `AnsiImage` object keeps the full PIL Image in memory, allowing multiple
+renders with different parameters.
+
+The `RenderedAnsiImage` objects only contain the text representation. Use the
+`render()` method to obtain the latter and discard the former if memory usage
+is a concern.
 
 ## Algorithm
 
 The rendering algorithm is a direct port from the C++ implementation in [TerminalImageViewer](https://github.com/stefanhaustein/TerminalImageViewer), providing the same high-quality terminal image display in pure Python.
+
+On a high-level, it works by splitting the image into 4x8 pixel blocks and
+selecting the most appropriate unicode block character for each, with the
+closest matching foreground and background colors.
