@@ -121,7 +121,8 @@ class AnsiImage:
         self,
         output_width: Optional[int] = None, 
         output_height: Optional[int] = None, 
-        flags: int = 0
+        flags: int = 0,
+        fill: Optional[str] = None
     ) -> "RenderedAnsiImage":
         """Render the image to ANSI terminal output.
         
@@ -131,19 +132,22 @@ class AnsiImage:
             output_height: Maximum height for the output (in terminal character rows).
                           If None, uses current terminal height or calculates from width and aspect ratio.
             flags: Bit flags controlling rendering options
+            fill: Optional background color as hex string (e.g., "#ffffff" for white).
+                 If provided, adds background pixels so the image fills the whole bounding box.
             
         Returns:
             A RenderedAnsiImage object containing the converted image
         """
         output_width, output_height = _get_terminal_dimensions(output_width, output_height, self.image)
-        return to_ascii(self.image, output_width, output_height, flags)
+        return to_ascii(self.image, output_width, output_height, flags, fill)
     
     @staticmethod
     def from_image(
         img: "Image.Image", 
         output_width: Optional[int] = None, 
         output_height: Optional[int] = None, 
-        flags: int = 0
+        flags: int = 0,
+        fill: Optional[str] = None
     ) -> "RenderedAnsiImage":
         """Create a RenderedAnsiImage from a PIL Image.
         
@@ -157,19 +161,22 @@ class AnsiImage:
             output_height: Maximum height for the output (in terminal character rows).
                           If None, uses current terminal height or calculates from width and aspect ratio.
             flags: Bit flags controlling rendering options
+            fill: Optional background color as hex string (e.g., "#ffffff" for white).
+                 If provided, adds background pixels so the image fills the whole bounding box.
             
         Returns:
             A RenderedAnsiImage object containing the converted image
         """
         output_width, output_height = _get_terminal_dimensions(output_width, output_height, img)
-        return to_ascii(img, output_width, output_height, flags)
+        return to_ascii(img, output_width, output_height, flags, fill)
     
     @staticmethod
     def from_image_file(
         file_path: str, 
         output_width: Optional[int] = None, 
         output_height: Optional[int] = None, 
-        flags: int = 0
+        flags: int = 0,
+        fill: Optional[str] = None
     ) -> "RenderedAnsiImage":
         """Create a RenderedAnsiImage from an image file.
         
@@ -183,6 +190,8 @@ class AnsiImage:
             output_height: Maximum height for the output (in terminal character rows).
                           If None, uses current terminal height or calculates from width and aspect ratio.
             flags: Bit flags controlling rendering options
+            fill: Optional background color as hex string (e.g., "#ffffff" for white).
+                 If provided, adds background pixels so the image fills the whole bounding box.
             
         Returns:
             A RenderedAnsiImage object containing the converted image
@@ -192,11 +201,11 @@ class AnsiImage:
             IOError: If the image file cannot be opened or is not a valid image
         """
         img = Image.open(file_path)
-        return AnsiImage.from_image(img, output_width, output_height, flags)
+        return AnsiImage.from_image(img, output_width, output_height, flags, fill)
 
 
 def to_ascii(
-    img: "Image.Image", output_width: int, output_height: int, flags: int = 0
+    img: "Image.Image", output_width: int, output_height: int, flags: int = 0, fill: Optional[str] = None
 ) -> "RenderedAnsiImage":
     """Convert an image to ASCII art with resizing logic from TerminalImageViewer.
 
@@ -208,6 +217,8 @@ def to_ascii(
         output_width: Maximum width for the output (in terminal character columns)
         output_height: Maximum height for the output (in terminal character rows)
         flags: Bit flags controlling rendering options (same as print_image)
+        fill: Optional background color as hex string (e.g., "#ffffff" for white).
+             If provided, adds background pixels so the image fills the whole bounding box.
 
     Returns:
         List of strings containing ANSI color codes and Unicode characters representing the image
@@ -240,7 +251,34 @@ def to_ascii(
 
         # Resize the image using high-quality resampling
         img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+    else:
+        new_width, new_height = original_width, original_height
 
-    # Convert the (possibly resized) image to ASCII using print_image
+    # Apply fill background if specified
+    if fill is not None:
+        # Parse hex color string (supports both #ffffff and ffffff formats)
+        fill_color_str = fill.lstrip('#')
+        if len(fill_color_str) != 6:
+            raise ValueError(f"Invalid fill color '{fill}': expected 6-character hex string")
+        
+        try:
+            fill_r = int(fill_color_str[0:2], 16)
+            fill_g = int(fill_color_str[2:4], 16)
+            fill_b = int(fill_color_str[4:6], 16)
+        except ValueError:
+            raise ValueError(f"Invalid fill color '{fill}': not a valid hex color")
+        
+        # Create a new image with the target dimensions and fill color
+        filled_img = Image.new("RGB", (max_pixel_width, max_pixel_height), (fill_r, fill_g, fill_b))
+        
+        # Center the original image on the filled background
+        x_offset = (max_pixel_width - new_width) // 2
+        y_offset = (max_pixel_height - new_height) // 2
+        filled_img.paste(img, (x_offset, y_offset))
+        
+        img = filled_img
+        new_width, new_height = max_pixel_width, max_pixel_height
+
+    # Convert the (possibly resized and filled) image to ASCII using print_image
     lines = print_image(img, flags)
     return RenderedAnsiImage(width=new_width // 4, height=new_height // 8, data=lines)
