@@ -2,31 +2,15 @@
 
 A library and tool for displaying images in the terminal, using ANSI color codes.
 
-The pixel-to-ansi algorithm a straight port from the [tiv (TerminalImageViewer)](https://github.com/stefanhaustein/TerminalImageViewer) implementation, so this library should
+The pixel-to-ansi algorithm is a straight port from the [tiv (TerminalImageViewer)](https://github.com/stefanhaustein/TerminalImageViewer) implementation, so this library should
 produce exactly the same images.
 
 The main difference compared to most other terminal image viewers is that this
 project is mainly designed as a library, instead of a command-line application.
 
-The image handling is based on PIL/Pillow, so all common image formats are supported.
-
 For *displaying* the images, your terminal must support ANSI, 24 bit true color
 and unicode rendering. Unless you're a retro computing enthusiast, your current
 terminal does support these.
-
-## Installation
-
-Install via pypi:
-
-```bash
-pip install ansi-image
-```
-
-Or use as a standalone tool:
-
-```bash
-uvx ansi-image tests/test_image.png
-```
 
 ## Usage
 
@@ -35,8 +19,8 @@ uvx ansi-image tests/test_image.png
 ```python
 from ansi_image import AnsiImage
 
-ansi_img = AnsiImage.from_file("tests/test_image.png")
-print(ansi_img.render())
+image = AnsiImage.from_file("tests/test_image.png")
+print(image)
 ```
 
 ![Result](readme_image.png)
@@ -57,24 +41,24 @@ are not square but rectangular.
 ```python
 from ansi_image import AnsiImage
 
-ansi_img = AnsiImage.from_file("tests/test_image.png")
+image = AnsiImage.from_file("tests/test_image.png")
 
 # Use the current terminal size as default width and height
-print(ansi_img.render())
+print(image)
 input("press enter...")
 
 # Set an explicit max width and height
-rendered_image = ansi_img.render(max_width=80, max_height=24)
-print(rendered_image)
+render = image.render(max_width=80, max_height=24)
+print(render)
 input("press enter...")
 
 # Using format strings
-print(f"{ansi_img:w=40,h=20}")
-print(f"{ansi_img:width=60}")
+print(f"{image:w=40,h=20}")
+print(f"{image:width=60}")
 input("press enter...")
 
 # Add background color to fill the entire bounding box
-rendered = ansi_img.render(fill="#ffffff")
+rendered = image.render(fill="#ffffff")
 print(rendered)
 print(f"rendered image with dimensions f{rendered.width}x{rendered.height}")
 ```
@@ -91,7 +75,7 @@ from PIL import Image
 img = Image.open("tests/test_image.png")
 stretched_img = img.resize((160, 48))  # Stretch to exact dimensions
 ansi_stretched = AnsiImage.from_image(stretched_img)
-print(ansi_stretched.render())
+print(ansi_stretched)
 ```
 
 ### Command Line Tool
@@ -141,3 +125,17 @@ The rendering algorithm is a direct port from the C++ implementation in [Termina
 On a high-level, it works by splitting the image into 4x8 pixel blocks and
 selecting the most appropriate unicode block character for each, with the
 closest matching foreground and background colors.
+
+## Installation
+
+Install via pypi:
+
+```bash
+pip install ansi-image
+```
+
+Or use as a standalone tool:
+
+```bash
+uvx ansi-image tests/test_image.png
+```
