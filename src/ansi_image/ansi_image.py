@@ -22,11 +22,9 @@ def _get_terminal_dimensions(
     Raises:
         ValueError: If both dimensions are None but no image is provided for aspect ratio calculation
     """
-    # If both dimensions are provided, use them as-is
     if output_width is not None and output_height is not None:
         return output_width, output_height
     
-    # If neither dimension is provided, get terminal size
     if output_width is None and output_height is None:
         try:
             terminal_size = os.get_terminal_size()
@@ -38,7 +36,6 @@ def _get_terminal_dimensions(
             output_height = 24
         return output_width, output_height
     
-    # If only one dimension is provided, calculate the other based on aspect ratio
     if img is None:
         raise ValueError("Image must be provided to calculate missing dimension based on aspect ratio")
     
@@ -46,15 +43,12 @@ def _get_terminal_dimensions(
     aspect_ratio = original_width / original_height
     
     if output_width is not None:
-        # Calculate height from width while preserving aspect ratio
         # Account for character cell ratio (4x8 pixels per cell)
         output_height = int((output_width * 4) / (aspect_ratio * 8))
     elif output_height is not None:
-        # Calculate width from height while preserving aspect ratio  
         # Account for character cell ratio (4x8 pixels per cell)
         output_width = int((output_height * 8 * aspect_ratio) / 4)
     
-    # At this point, both dimensions should be set
     assert output_width is not None and output_height is not None
     return output_width, output_height
 
@@ -160,15 +154,12 @@ class AnsiImage:
         Returns:
             Formatted string representation of the rendered image
         """
-        # Default values
         width: Optional[int] = None
         height: Optional[int] = None
         fill: Optional[str] = None
         flags: int = 0
         
-        # Parse format specifiers
         if format_spec:
-            # Split by commas and process each specifier
             for spec in format_spec.split(','):
                 spec = spec.strip()
                 if '=' not in spec:
@@ -189,7 +180,6 @@ class AnsiImage:
                     except ValueError:
                         raise ValueError(f"Invalid height value: {value}")
                 elif key in ('bg', 'background', 'fill'):
-                    # Accept both #ffffff and ffffff formats
                     if not value.startswith('#') and re.match(r'^[0-9a-fA-F]{6}$', value):
                         value = '#' + value
                     fill = value
@@ -201,7 +191,6 @@ class AnsiImage:
                 else:
                     raise ValueError(f"Unknown format specifier: {key}")
         
-        # Render the image with the specified parameters
         rendered = self.render(output_width=width, output_height=height, flags=flags, fill=fill)
         return str(rendered)
     
@@ -289,38 +278,30 @@ def to_ascii(
     """
     from ansi_image.algorithms import print_image
 
-    # Convert to RGB if needed
     if img.mode != "RGB":
         img = img.convert("RGB")
 
-    # Get original image dimensions
     original_width, original_height = img.size
 
-    # Convert terminal dimensions to pixel dimensions
     # Each character cell represents 4x8 pixels in the ASCII art
     max_pixel_width = output_width * 4
     max_pixel_height = output_height * 8
 
     # Apply resize logic from tiv.cpp:360-366
     if original_width > max_pixel_width or original_height > max_pixel_height:
-        # Calculate scale factor that fits image within target dimensions
         # This matches the fitted_within logic: min(container.width/width, container.height/height)
         scale = min(
             max_pixel_width / original_width, max_pixel_height / original_height
         )
 
-        # Calculate new dimensions
         new_width = int(original_width * scale)
         new_height = int(original_height * scale)
 
-        # Resize the image using high-quality resampling
         img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
     else:
         new_width, new_height = original_width, original_height
 
-    # Apply fill background if specified
     if fill is not None:
-        # Parse hex color string (supports both #ffffff and ffffff formats)
         fill_color_str = fill.lstrip('#')
         if len(fill_color_str) != 6:
             raise ValueError(f"Invalid fill color '{fill}': expected 6-character hex string")
@@ -332,10 +313,8 @@ def to_ascii(
         except ValueError:
             raise ValueError(f"Invalid fill color '{fill}': not a valid hex color")
         
-        # Create a new image with the target dimensions and fill color
         filled_img = Image.new("RGB", (max_pixel_width, max_pixel_height), (fill_r, fill_g, fill_b))
         
-        # Center the original image on the filled background
         x_offset = (max_pixel_width - new_width) // 2
         y_offset = (max_pixel_height - new_height) // 2
         filled_img.paste(img, (x_offset, y_offset))
@@ -343,6 +322,5 @@ def to_ascii(
         img = filled_img
         new_width, new_height = max_pixel_width, max_pixel_height
 
-    # Convert the (possibly resized and filled) image to ASCII using print_image
     lines = print_image(img, flags)
     return RenderedAnsiImage(width=new_width // 4, height=new_height // 8, data=lines)

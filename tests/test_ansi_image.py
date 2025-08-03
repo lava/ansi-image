@@ -76,7 +76,6 @@ class TestAnsiImage(unittest.TestCase):
 
     def test_scaling_dimensions_only(self) -> None:
         """Test that scaling works correctly by checking only dimensions."""
-        # Test various sizes to ensure scaling is working
         test_cases = [
             (10, 5),
             (80, 40),
@@ -88,13 +87,11 @@ class TestAnsiImage(unittest.TestCase):
             with self.subTest(width=width, height=height):
                 ansi_img = AnsiImage.from_file(str(self.test_image_path), width, height, 0)
                 
-                # Check that dimensions are reasonable (should be <= requested due to scaling)
                 self.assertLessEqual(ansi_img.width, width, 
                     f"Width {ansi_img.width} should be <= requested {width}")
                 self.assertLessEqual(ansi_img.height, height,
                     f"Height {ansi_img.height} should be <= requested {height}")
                 
-                # Check that we have some content
                 self.assertGreater(ansi_img.width, 0, "Width should be > 0")
                 self.assertGreater(ansi_img.height, 0, "Height should be > 0")
                 self.assertEqual(len(ansi_img.data), ansi_img.height, 
@@ -102,13 +99,11 @@ class TestAnsiImage(unittest.TestCase):
 
     def test_aspect_ratio_preservation(self) -> None:
         """Test that aspect ratio is reasonably preserved during scaling."""
-        # Get original image dimensions using PIL
         from PIL import Image
         with Image.open(self.test_image_path) as img:
             original_width, original_height = img.size
             original_aspect = original_width / original_height
 
-        # Test different target dimensions
         # Note: smaller targets may have more aspect ratio deviation due to discrete character cells
         test_cases = [
             (40, 20, 0.1),   # Should be very close
@@ -120,7 +115,6 @@ class TestAnsiImage(unittest.TestCase):
             with self.subTest(target_width=target_width, target_height=target_height):
                 ansi_img = AnsiImage.from_file(str(self.test_image_path), target_width, target_height, 0)
                 
-                # Calculate the actual pixel dimensions (each char is 4x8 pixels)
                 actual_pixel_width = ansi_img.width * 4
                 actual_pixel_height = ansi_img.height * 8
                 actual_aspect = actual_pixel_width / actual_pixel_height
@@ -131,13 +125,11 @@ class TestAnsiImage(unittest.TestCase):
 
     def test_dimension_validation(self) -> None:
         """Test single dimension specification with aspect ratio preservation."""
-        # Test that providing only width works with aspect ratio preservation
         ansi_img_width_only = AnsiImage.from_file(str(self.test_image_path), 40, None, 0)
         self.assertGreater(ansi_img_width_only.width, 0)
         self.assertGreater(ansi_img_width_only.height, 0)
         self.assertLessEqual(ansi_img_width_only.width, 40)
         
-        # Test that providing only height works with aspect ratio preservation
         ansi_img_height_only = AnsiImage.from_file(str(self.test_image_path), None, 20, 0)
         self.assertGreater(ansi_img_height_only.width, 0)
         self.assertGreater(ansi_img_height_only.height, 0)
@@ -147,11 +139,9 @@ class TestAnsiImage(unittest.TestCase):
         """Test string representation methods."""
         ansi_img = AnsiImage.from_file(str(self.test_image_path), 20, 10, 0)
         
-        # Test __str__ returns joined data
         str_repr = str(ansi_img)
         self.assertEqual(str_repr, "\n".join(ansi_img.data))
         
-        # Test __repr__ contains expected format
         repr_str = repr(ansi_img)
         self.assertIn("RenderedAnsiImage", repr_str)
         self.assertIn(f"width={ansi_img.width}", repr_str)
@@ -173,10 +163,8 @@ class TestAnsiImage(unittest.TestCase):
         from PIL import Image
         
         with Image.open(self.test_image_path) as img:
-            # Create new AnsiImage with image data
             ansi_img = AnsiImage(img)
             
-            # Render it to RenderedAnsiImage
             rendered = ansi_img.render(30, 15, 0)
             
             self.assertIsInstance(rendered, RenderedAnsiImage)
@@ -184,33 +172,28 @@ class TestAnsiImage(unittest.TestCase):
             self.assertGreater(rendered.height, 0)
             self.assertEqual(len(rendered.data), rendered.height)
             
-            # Test rendering with different parameters
             rendered_large = ansi_img.render(60, 30, 0)
             self.assertGreater(rendered_large.width, rendered.width)
             self.assertGreater(rendered_large.height, rendered.height)
 
     def test_different_flag_combinations(self) -> None:
         """Test different flag combinations for rendering options."""
-        # Test a few different flag values (we already test FLAG_NOOPT=1 above)
-        flag_values = [0, 1, 2, 4]  # Various flag combinations
+        flag_values = [0, 1, 2, 4]
         
         for flags in flag_values:
             with self.subTest(flags=flags):
                 try:
                     ansi_img = AnsiImage.from_file(str(self.test_image_path), 20, 10, flags)
                     
-                    # Basic sanity checks
                     self.assertGreater(ansi_img.width, 0)
                     self.assertGreater(ansi_img.height, 0)
                     self.assertEqual(len(ansi_img.data), ansi_img.height)
                     
-                    # Each line should contain ANSI escape sequences
                     for line in ansi_img.data:
                         self.assertIsInstance(line, str)
-                        self.assertIn('\x1b', line)  # Should contain ANSI escape sequences
+                        self.assertIn('\x1b', line)
                 
                 except Exception as e:
-                    # If flags are invalid, that's expected behavior
                     self.assertTrue(isinstance(e, (ValueError, KeyError)), 
                         f"Unexpected exception type for flags {flags}: {type(e)}")
 

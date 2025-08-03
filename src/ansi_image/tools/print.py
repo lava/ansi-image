@@ -61,7 +61,6 @@ def main() -> None:
     
     args = parser.parse_args()
     
-    # Validate file exists
     image_path = Path(args.filename)
     if not image_path.exists():
         print(f"Error: File '{args.filename}' does not exist.", file=sys.stderr)
@@ -71,12 +70,10 @@ def main() -> None:
         print(f"Error: '{args.filename}' is not a file.", file=sys.stderr)
         sys.exit(1)
     
-    # Get dimensions from args
     width: Optional[int] = getattr(args, 'width', None)
     height: Optional[int] = getattr(args, 'height', None)
     
     try:
-        # Create and display the image
         fill_color = getattr(args, 'bg_color', '#000000') if args.fill else None
         ansi_img = AnsiImage.from_file(str(image_path), width, height, args.flags, fill_color)
         print(ansi_img)

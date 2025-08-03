@@ -8,8 +8,7 @@ from typing import Callable, NamedTuple, Tuple, List, Optional, Dict, TYPE_CHECK
 import math
 from collections import defaultdict
 
-from .ansi_image import AnsiImage
-from .tables import (
+from ansi_image.tables import (
     FLAG_FG, FLAG_BG, FLAG_MODE_256, FLAG_24BIT, FLAG_NOOPT, FLAG_TELETEXT,
     COLOR_STEP_COUNT, COLOR_STEPS, GRAYSCALE_STEP_COUNT, GRAYSCALE_STEPS,
     END_MARKER, BITMAPS
@@ -107,12 +106,10 @@ def print_term_color(flags: int, r: int, g: int, b: int) -> str:
     Returns:
         ANSI escape sequence string for the specified color
     """
-    # Clamp RGB values to 0-255 range
     r = clamp_byte(r)
     g = clamp_byte(g)
     b = clamp_byte(b)
 
-    # Check if background color is requested
     bg = (flags & FLAG_BG) != 0
 
     # 24-bit true color mode (default)
@@ -123,12 +120,10 @@ def print_term_color(flags: int, r: int, g: int, b: int) -> str:
             return f"\x1b[38;2;{r};{g};{b}m"
 
     # 256-color mode - find best color approximation
-    # Find best indices in COLOR_STEPS for RGB values
     ri = best_index(r, COLOR_STEPS)
     gi = best_index(g, COLOR_STEPS)
     bi = best_index(b, COLOR_STEPS)
 
-    # Get quantized RGB values
     rq = COLOR_STEPS[ri]
     gq = COLOR_STEPS[gi]
     bq = COLOR_STEPS[bi]
@@ -136,7 +131,6 @@ def print_term_color(flags: int, r: int, g: int, b: int) -> str:
     # Calculate grayscale equivalent using standard luminance weights
     gray = round(r * 0.2989 + g * 0.5870 + b * 0.1140)
 
-    # Find best grayscale match
     gri = best_index(gray, GRAYSCALE_STEPS)
     grq = GRAYSCALE_STEPS[gri]
 
@@ -232,17 +226,13 @@ def create_char_data(
                 target_color = result.bg_color
                 bg_count += 1
 
-            # Get RGB color from pixel
             rgb = get_pixel(x0 + x, y0 + y)
 
-            # Accumulate color channels
             for i in range(3):
                 target_color[i] += get_channel(rgb, i)
 
-            # Move to next bit
             mask = mask >> 1
 
-    # Calculate average colors
     for i in range(3):
         if bg_count != 0:
             result.bg_color[i] //= bg_count
@@ -316,11 +306,9 @@ def print_image(image: "Image.Image", flags: int) -> list[str]:
     Returns:
         String containing ANSI color codes and Unicode characters representing the image
     """
-    # Convert image to RGB mode if it isn't already
     if image.mode != "RGB":
         image = image.convert("RGB")
 
-    # Get image dimensions
     width, height = image.size
 
     # Create get_pixel function for PIL Image
@@ -379,8 +367,7 @@ def print_image(image: "Image.Image", flags: int) -> list[str]:
 
             last_char_data = char_data
 
-        # Reset colors and add newline at end of each line
-        line_output.append("\x1b[0m")  # Reset ANSI formatting
+        line_output.append("\x1b[0m")
         result.append("".join(line_output))
 
     return result
@@ -422,20 +409,16 @@ def find_char_data(
             rgb = get_pixel(x0 + x, y0 + y)
             color = 0
 
-            # Build color value and update min/max for each channel
             for i in range(3):
                 channel_val = get_channel(rgb, i)
                 min_vals[i] = min(min_vals[i], channel_val)
                 max_vals[i] = max(max_vals[i], channel_val)
                 color = (color << 8) | channel_val
 
-            # Count occurrences of each color
             count_per_color[color] = count_per_color.get(color, 0) + 1
 
-    # Sort colors by frequency (most common first)
     sorted_colors = sorted(count_per_color.items(), key=lambda x: x[1], reverse=True)
 
-    # Get the two most common colors
     max_count_color_1 = sorted_colors[0][0]
     count2 = sorted_colors[0][1]
     max_count_color_2 = max_count_color_1
@@ -445,7 +428,6 @@ def find_char_data(
         max_count_color_2 = sorted_colors[1][0]
 
     bits = 0
-    # Determine if we should use direct mode (2 most common colors > 50% of pixels)
     direct = count2 > (8 * 4) // 2
 
     if direct:
@@ -455,9 +437,8 @@ def find_char_data(
                 bits = bits << 1
                 rgb = get_pixel(x0 + x, y0 + y)
 
-                # Calculate squared distance to each of the two most common colors
-                d1 = 0  # Distance to max_count_color_1
-                d2 = 0  # Distance to max_count_color_2
+                d1 = 0
+                d2 = 0
 
                 for i in range(3):
                     shift = 16 - 8 * i
@@ -467,7 +448,6 @@ def find_char_data(
                     d1 += (c1 - c) * (c1 - c)
                     d2 += (c2 - c) * (c2 - c)
 
-                # Set bit if closer to second color
                 if d1 > d2:
                     bits |= 1
     else:
@@ -481,58 +461,47 @@ def find_char_data(
                 best_split = range_val
                 split_index = i
 
-        # Split at the middle of the interval
         split_value = min_vals[split_index] + best_split // 2
 
-        # Create bitmap based on split
         for y in range(8):
             for x in range(4):
                 bits = bits << 1
                 if get_channel(get_pixel(x0 + x, y0 + y), split_index) > split_value:
                     bits |= 1
 
-    # Search for the best bitmap match in BITMAPS array
-    best_diff = 8  # Start with a value larger than possible
+    best_diff = 8
     best_pattern = 0x0000FFFF
     codepoint = 0x2584
     inverted = False
 
-    # Iterate through BITMAPS array (every 3 elements: pattern, codepoint, flags)
     i = 0
     while i < len(BITMAPS) and BITMAPS[i + 1] != END_MARKER:
-        # Check if this bitmap is allowed by the flags
         if (BITMAPS[i + 2] & flags) != BITMAPS[i + 2]:
             i += 3
             continue
 
         pattern = BITMAPS[i]
 
-        # Test both normal and inverted patterns
         for j in range(2):
-            # Count different bits using XOR and bit counting
             diff = bin(pattern ^ bits).count("1")
 
             if diff < best_diff:
-                best_pattern = BITMAPS[i]  # Always store original pattern
+                best_pattern = BITMAPS[i]
                 codepoint = BITMAPS[i + 1]
                 best_diff = diff
                 inverted = best_pattern != pattern
 
-            # Invert pattern for second iteration
             pattern = ~pattern & 0xFFFFFFFF
 
         i += 3
 
-    # Create result based on mode
     if direct:
         result = CharData()
         result.codepoint = codepoint
 
-        # If inverted, swap the two most common colors
         if inverted:
             max_count_color_1, max_count_color_2 = max_count_color_2, max_count_color_1
 
-        # Extract RGB components and assign to fg/bg colors
         for i in range(3):
             shift = 16 - 8 * i
             result.fg_color[i] = (max_count_color_2 >> shift) & 255
@@ -540,55 +509,6 @@ def find_char_data(
 
         return result
     else:
-        # Use createCharData for color channel split mode
         return create_char_data(get_pixel, x0, y0, codepoint, best_pattern)
 
 
-def to_ascii(
-    img: "Image.Image", output_width: int, output_height: int, flags: int = 0
-) -> AnsiImage:
-    """Convert an image to ASCII art with resizing logic from TerminalImageViewer.
-
-    This function implements the same resize logic as tiv.cpp:360-366, scaling the
-    image down to fit within the specified dimensions while maintaining aspect ratio.
-
-    Args:
-        img: PIL/Pillow Image object to convert to ASCII art
-        output_width: Maximum width for the output (in terminal character columns)
-        output_height: Maximum height for the output (in terminal character rows)
-        flags: Bit flags controlling rendering options (same as print_image)
-
-    Returns:
-        List of strings containing ANSI color codes and Unicode characters representing the image
-    """
-
-    # Convert to RGB if needed
-    if img.mode != "RGB":
-        img = img.convert("RGB")
-
-    # Get original image dimensions
-    original_width, original_height = img.size
-
-    # Convert terminal dimensions to pixel dimensions
-    # Each character cell represents 4x8 pixels in the ASCII art
-    max_pixel_width = output_width * 4
-    max_pixel_height = output_height * 8
-
-    # Apply resize logic from tiv.cpp:360-366
-    if original_width > max_pixel_width or original_height > max_pixel_height:
-        # Calculate scale factor that fits image within target dimensions
-        # This matches the fitted_within logic: min(container.width/width, container.height/height)
-        scale = min(
-            max_pixel_width / original_width, max_pixel_height / original_height
-        )
-
-        # Calculate new dimensions
-        new_width = int(original_width * scale)
-        new_height = int(original_height * scale)
-
-        # Resize the image using high-quality resampling
-        img = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
-
-    # Convert the (possibly resized) image to ASCII using print_image
-    lines = print_image(img, flags)
-    return AnsiImage(width=new_width // 4, height=new_height // 8, data=lines)
