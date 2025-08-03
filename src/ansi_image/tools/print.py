@@ -78,7 +78,7 @@ def main() -> None:
     try:
         # Create and display the image
         fill_color = getattr(args, 'bg_color', '#000000') if args.fill else None
-        ansi_img = AnsiImage.from_image_file(str(image_path), width, height, args.flags, fill_color)
+        ansi_img = AnsiImage.from_file(str(image_path), width, height, args.flags, fill_color)
         print(ansi_img)
     
     except Exception as e:

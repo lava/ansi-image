@@ -31,7 +31,7 @@ class TestAnsiImage(unittest.TestCase):
 
     def test_default_40x20_output(self) -> None:
         """Test conversion with default settings at 40x20."""
-        ansi_img = AnsiImage.from_image_file(str(self.test_image_path), 40, 20, 0)
+        ansi_img = AnsiImage.from_file(str(self.test_image_path), 40, 20, 0)
         expected = self.expected_outputs['default_40x20']
         
         self.assertEqual(ansi_img.width, expected['width'])
@@ -40,7 +40,7 @@ class TestAnsiImage(unittest.TestCase):
 
     def test_small_20x10_output(self) -> None:
         """Test conversion with small dimensions 20x10."""
-        ansi_img = AnsiImage.from_image_file(str(self.test_image_path), 20, 10, 0)
+        ansi_img = AnsiImage.from_file(str(self.test_image_path), 20, 10, 0)
         expected = self.expected_outputs['small_20x10']
         
         self.assertEqual(ansi_img.width, expected['width'])
@@ -49,7 +49,7 @@ class TestAnsiImage(unittest.TestCase):
 
     def test_large_60x30_output(self) -> None:
         """Test conversion with large dimensions 60x30."""
-        ansi_img = AnsiImage.from_image_file(str(self.test_image_path), 60, 30, 0)
+        ansi_img = AnsiImage.from_file(str(self.test_image_path), 60, 30, 0)
         expected = self.expected_outputs['large_60x30']
         
         self.assertEqual(ansi_img.width, expected['width'])
@@ -58,7 +58,7 @@ class TestAnsiImage(unittest.TestCase):
 
     def test_auto_size_output(self) -> None:
         """Test conversion with automatic terminal size detection."""
-        ansi_img = AnsiImage.from_image_file(str(self.test_image_path), None, None, 0)
+        ansi_img = AnsiImage.from_file(str(self.test_image_path), None, None, 0)
         expected = self.expected_outputs['auto_size']
         
         self.assertEqual(ansi_img.width, expected['width'])
@@ -67,7 +67,7 @@ class TestAnsiImage(unittest.TestCase):
 
     def test_noopt_flag_output(self) -> None:
         """Test conversion with FLAG_NOOPT (simple mode)."""
-        ansi_img = AnsiImage.from_image_file(str(self.test_image_path), 40, 20, 1)  # FLAG_NOOPT = 1
+        ansi_img = AnsiImage.from_file(str(self.test_image_path), 40, 20, 1)  # FLAG_NOOPT = 1
         expected = self.expected_outputs['noopt_40x20']
         
         self.assertEqual(ansi_img.width, expected['width'])
@@ -86,7 +86,7 @@ class TestAnsiImage(unittest.TestCase):
         
         for width, height in test_cases:
             with self.subTest(width=width, height=height):
-                ansi_img = AnsiImage.from_image_file(str(self.test_image_path), width, height, 0)
+                ansi_img = AnsiImage.from_file(str(self.test_image_path), width, height, 0)
                 
                 # Check that dimensions are reasonable (should be <= requested due to scaling)
                 self.assertLessEqual(ansi_img.width, width, 
@@ -118,7 +118,7 @@ class TestAnsiImage(unittest.TestCase):
         
         for target_width, target_height, tolerance in test_cases:
             with self.subTest(target_width=target_width, target_height=target_height):
-                ansi_img = AnsiImage.from_image_file(str(self.test_image_path), target_width, target_height, 0)
+                ansi_img = AnsiImage.from_file(str(self.test_image_path), target_width, target_height, 0)
                 
                 # Calculate the actual pixel dimensions (each char is 4x8 pixels)
                 actual_pixel_width = ansi_img.width * 4
@@ -132,20 +132,20 @@ class TestAnsiImage(unittest.TestCase):
     def test_dimension_validation(self) -> None:
         """Test single dimension specification with aspect ratio preservation."""
         # Test that providing only width works with aspect ratio preservation
-        ansi_img_width_only = AnsiImage.from_image_file(str(self.test_image_path), 40, None, 0)
+        ansi_img_width_only = AnsiImage.from_file(str(self.test_image_path), 40, None, 0)
         self.assertGreater(ansi_img_width_only.width, 0)
         self.assertGreater(ansi_img_width_only.height, 0)
         self.assertLessEqual(ansi_img_width_only.width, 40)
         
         # Test that providing only height works with aspect ratio preservation
-        ansi_img_height_only = AnsiImage.from_image_file(str(self.test_image_path), None, 20, 0)
+        ansi_img_height_only = AnsiImage.from_file(str(self.test_image_path), None, 20, 0)
         self.assertGreater(ansi_img_height_only.width, 0)
         self.assertGreater(ansi_img_height_only.height, 0)
         self.assertLessEqual(ansi_img_height_only.height, 20)
 
     def test_string_representation(self) -> None:
         """Test string representation methods."""
-        ansi_img = AnsiImage.from_image_file(str(self.test_image_path), 20, 10, 0)
+        ansi_img = AnsiImage.from_file(str(self.test_image_path), 20, 10, 0)
         
         # Test __str__ returns joined data
         str_repr = str(ansi_img)
@@ -197,7 +197,7 @@ class TestAnsiImage(unittest.TestCase):
         for flags in flag_values:
             with self.subTest(flags=flags):
                 try:
-                    ansi_img = AnsiImage.from_image_file(str(self.test_image_path), 20, 10, flags)
+                    ansi_img = AnsiImage.from_file(str(self.test_image_path), 20, 10, flags)
                     
                     # Basic sanity checks
                     self.assertGreater(ansi_img.width, 0)

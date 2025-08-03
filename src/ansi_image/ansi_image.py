@@ -235,7 +235,7 @@ class AnsiImage:
         return to_ascii(img, output_width, output_height, flags, fill)
     
     @staticmethod
-    def from_image_file(
+    def from_file(
         file_path: str, 
         output_width: Optional[int] = None, 
         output_height: Optional[int] = None, 

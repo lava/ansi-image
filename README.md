@@ -1,6 +1,6 @@
 # ansi-image
 
-A pure Python library for displaying images in the terminal using ANSI color codes. This is a straight port of the algorithm from the [tiv (TerminalImageViewer)](https://github.com/stefanhaustein/TerminalImageViewer) command, making it available as a Python library.
+A library and tool for displaying images in the terminal using ANSI color codes. This is a straight port of the algorithm from the [tiv (TerminalImageViewer)](https://github.com/stefanhaustein/TerminalImageViewer) command, making it available as a Python library.
 
 ## Installation
 
@@ -35,7 +35,7 @@ from PIL import Image
 from ansi_image import AnsiImage
 
 # Load and render directly to text (doesn't keep image in memory)
-rendered = AnsiImage.from_image_file("path/to/your/image.jpg")
+rendered = AnsiImage.from_file("path/to/your/image.jpg")
 print(rendered)
 
 # Or from an existing PIL Image
@@ -76,9 +76,11 @@ print(f"{ansi_img:w=40,bg=#000000}")  # Black background
 The package also includes a command-line tool:
 
 ```bash
-print-image path/to/your/image.jpg
-print-image --width 80 --height 24 image.jpg
-print-image --fill "#ffffff" image.jpg
+print path/to/your/image.jpg
+print --width 80 --height 24 image.jpg
+print --fill "#ffffff" image.jpg
+# Or use the alias:
+ansi-image path/to/your/image.jpg
 ```
 
 ## API Reference
@@ -90,7 +92,7 @@ Main class that stores the original PIL Image and provides rendering methods.
 - `AnsiImage(image)` - Create from PIL Image object
 - `render(output_width=None, output_height=None, flags=0, fill=None)` - Render to RenderedAnsiImage
 - `AnsiImage.from_image(img, ...)` - Static method to render directly from PIL Image
-- `AnsiImage.from_image_file(path, ...)` - Static method to load and render from file
+- `AnsiImage.from_file(path, ...)` - Static method to load and render from file
 
 ### RenderedAnsiImage
 
@@ -105,7 +107,7 @@ Contains the pre-rendered text representation that can be printed.
 
 - `AnsiImage` objects keep the full PIL Image in memory, allowing multiple renders with different parameters
 - `RenderedAnsiImage` objects only contain the text representation
-- For one-time rendering, use the static methods `from_image()` or `from_image_file()` to avoid keeping the image in memory
+- For one-time rendering, use the static methods `from_image()` or `from_file()` to avoid keeping the image in memory
 
 ## Algorithm
 
