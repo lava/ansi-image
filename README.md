@@ -1,6 +1,12 @@
 # ansi-image
 
-A library and tool for displaying images in the terminal using ANSI color codes. This is a straight port of the algorithm from the [tiv (TerminalImageViewer)](https://github.com/stefanhaustein/TerminalImageViewer) command, making it available as a Python library.
+A library and tool for displaying images in the terminal, using ANSI color codes.
+
+The pixel-to-ansi algorithm a straight port from the [tiv (TerminalImageViewer)](https://github.com/stefanhaustein/TerminalImageViewer) implementation, so this library should
+produce exactly the same images.
+
+The main difference compared to most other terminal image viewers is that this
+project is mainly designed as a library, instead of a command-line application.
 
 The image handling is based on PIL/Pillow, so all common image formats are supported.
 

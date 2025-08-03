@@ -13,7 +13,6 @@ dependencies = [
 ]
 
 [project.scripts]
-print = "ansi_image.tools.print:main"
 ansi-image = "ansi_image.tools.print:main"
 
 [build-system]
