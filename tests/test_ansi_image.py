@@ -3,9 +3,9 @@ import os
 import unittest
 from pathlib import Path
 from typing import Any, Dict
+from unittest.mock import patch
 
-from src.ansi_image.ansi_image import AnsiImage, RenderedAnsiImage
-
+from ansi_image.ansi_image import AnsiImage, RenderedAnsiImage
 
 class TestAnsiImage(unittest.TestCase):
     """Test suite for AnsiImage conversion functionality."""
@@ -58,12 +58,15 @@ class TestAnsiImage(unittest.TestCase):
 
     def test_auto_size_output(self) -> None:
         """Test conversion with automatic terminal size detection."""
-        ansi_img = AnsiImage.from_file(str(self.test_image_path), None, None, 0)
-        expected = self.expected_outputs['auto_size']
-        
-        self.assertEqual(ansi_img.width, expected['width'])
-        self.assertEqual(ansi_img.height, expected['height'])
-        self.assertEqual(ansi_img.data, expected['data'])
+        # Mock os.get_terminal_size to return consistent dimensions
+        mock_terminal_size = os.terminal_size((72, 24))
+        with patch('ansi_image.ansi_image.os.get_terminal_size', return_value=mock_terminal_size):
+            ansi_img = AnsiImage.from_file(str(self.test_image_path), None, None, 0)
+            expected = self.expected_outputs['auto_size']
+            
+            self.assertEqual(ansi_img.width, expected['width'])
+            self.assertEqual(ansi_img.height, expected['height'])
+            self.assertEqual(ansi_img.data, expected['data'])
 
     def test_noopt_flag_output(self) -> None:
         """Test conversion with FLAG_NOOPT (simple mode)."""
